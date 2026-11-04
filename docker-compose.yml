@@ -38,7 +38,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/price_tracker_db
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgrespassword@db:5432/price_tracker_db
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=supersecretdevkey123
     depends_on:
@@ -54,7 +54,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/price_tracker_db
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgrespassword@db:5432/price_tracker_db
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=supersecretdevkey123
     depends_on:
@@ -70,7 +70,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/price_tracker_db
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgrespassword@db:5432/price_tracker_db
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=supersecretdevkey123
     depends_on:
