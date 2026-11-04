@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PricePulse — Price Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' },
+            surface: { 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #020617; }
+    .gradient-text { background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(148, 163, 184, 0.1); backdrop-filter: blur(12px); }
+    .card-hover { transition: all 0.2s; }
+    .card-hover:hover { border-color: rgba(59, 130, 246, 0.4); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1); }
+    .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); transition: all 0.2s; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4); }
+    .input-field { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); color: #e2e8f0; transition: border-color 0.2s; }
+    .input-field:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+    .input-field::placeholder { color: #64748b; }
+    .modal-backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); }
+    .modal-content { background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.15); }
+    .quota-bar { background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 999px; transition: width 0.5s ease; }
+    .price-up { color: #ef4444; }
+    .price-down { color: #22c55e; }
+    .badge-free { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-premium { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .badge-domain { background: rgba(6, 182, 212, 0.1); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.2); }
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .pulse-dot { animation: pulseDot 2s infinite; }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; min-width: 280px; padding: 1rem 1.25rem; border-radius: 0.75rem; color: white; font-size: 0.875rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5); animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+    .toast.success { background: linear-gradient(135deg, #065f46, #064e3b); border: 1px solid rgba(34, 197, 94, 0.3); }
+    .toast.error { background: linear-gradient(135deg, #7f1d1d, #450a0a); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .toast.info { background: linear-gradient(135deg, #1e3a5f, #0c2340); border: 1px solid rgba(59, 130, 246, 0.3); }
+    .sample-chip { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #93c5fd; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 999px; cursor: pointer; transition: all 0.2s; }
+    .sample-chip:hover { background: rgba(59, 130, 246, 0.25); border-color: rgba(59, 130, 246, 0.5); }
+    .target-met { border-color: rgba(34, 197, 94, 0.5) !important; }
+    .target-met .price-current { color: #22c55e; font-weight: 700; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-200">
+
+  <!-- NAVBAR -->
+  <nav class="sticky top-0 z-50 border-b border-slate-800" style="background:rgba(2,6,23,0.9);backdrop-filter:blur(16px)">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg btn-primary flex items-center justify-center">
+          <i data-lucide="trending-down" class="w-4 h-4 text-white"></i>
+        </div>
+        <span class="text-xl font-bold gradient-text">PricePulse</span>
+        <span class="hidden sm:block text-xs text-slate-500 mt-0.5">Multi-Tenant Price Tracker</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Quota Meter (shown when logged in) -->
+        <div id="quotaDisplay" class="hidden items-center gap-2">
+          <span class="text-xs text-slate-400" id="quotaText">0 / 5</span>
+          <div class="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div class="quota-bar h-full" id="quotaBar" style="width:0%"></div>
+          </div>
+        </div>
+        <!-- Tier badge -->
+        <span id="tierBadge" class="hidden text-xs px-2.5 py-1 rounded-full font-medium badge-free">FREE</span>
+        <!-- Auth buttons -->
+        <div id="authButtons" class="flex gap-2">
+          <button onclick="showModal('loginModal')" class="text-sm text-slate-300 hover:text-white transition-colors px-3 py-1.5">Login</button>
+          <button onclick="showModal('registerModal')" class="btn-primary text-sm text-white px-4 py-1.5 rounded-lg font-medium">Get Started</button>
+        </div>
+        <!-- User menu (shown when logged in) -->
+        <div id="userMenu" class="hidden items-center gap-2">
+          <span id="userEmail" class="text-xs text-slate-400 hidden sm:block"></span>
+          <button onclick="logout()" class="text-xs text-slate-400 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-red-500/40">Logout</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO (shown when logged out) -->
+  <div id="heroSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div class="inline-flex items-center gap-2 text-xs bg-blue-500/10 border border-blue-500/20 text-blue-400 px-4 py-1.5 rounded-full mb-6">
+      <span class="pulse-dot w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+      Backend API running live
+    </div>
+    <h1 class="text-5xl sm:text-6xl font-extrabold text-white mb-5 leading-tight">
+      Track any price.<br/>
+      <span class="gradient-text">Get alerted instantly.</span>
+    </h1>
+    <p class="text-slate-400 text-lg max-w-2xl mx-auto mb-10">
+      A production-grade multi-tenant price tracking backend. Paste any e-commerce URL, set your target price, and our background workers monitor it 24/7 for you.
+    </p>
+    <div class="flex flex-wrap justify-center gap-3 mb-12">
+      <button onclick="demoLogin()" class="btn-primary text-white px-8 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
+        <i data-lucide="zap" class="w-4 h-4"></i> Demo Login (Instant Access)
+      </button>
+      <button onclick="showModal('registerModal')" class="text-sm text-slate-300 hover:text-white px-8 py-3 rounded-xl border border-slate-700 hover:border-slate-500 transition-all font-medium">
+        Create Free Account
+      </button>
+    </div>
+    <!-- Features Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+      <div class="card rounded-xl p-4 text-center">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/15 flex items-center justify-center mx-auto mb-2"><i data-lucide="shield" class="w-4 h-4 text-blue-400"></i></div>
+        <p class="text-xs font-medium text-slate-300">JWT Auth</p>
+        <p class="text-xs text-slate-500 mt-0.5">Tiered quotas</p>
+      </div>
+      <div class="card rounded-xl p-4 text-center">
+        <div class="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center mx-auto mb-2"><i data-lucide="git-merge" class="w-4 h-4 text-purple-400"></i></div>
+        <p class="text-xs font-medium text-slate-300">Deduplication</p>
+        <p class="text-xs text-slate-500 mt-0.5">Strategy pattern</p>
+      </div>
+      <div class="card rounded-xl p-4 text-center">
+        <div class="w-9 h-9 rounded-lg bg-cyan-500/15 flex items-center justify-center mx-auto mb-2"><i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i></div>
+        <p class="text-xs font-medium text-slate-300">Celery Workers</p>
+        <p class="text-xs text-slate-500 mt-0.5">Every 6 hours</p>
+      </div>
+      <div class="card rounded-xl p-4 text-center">
+        <div class="w-9 h-9 rounded-lg bg-green-500/15 flex items-center justify-center mx-auto mb-2"><i data-lucide="bell" class="w-4 h-4 text-green-400"></i></div>
+        <p class="text-xs font-medium text-slate-300">Smart Alerts</p>
+        <p class="text-xs text-slate-500 mt-0.5">24-hr cooldown</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD (shown when logged in) -->
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+
+    <!-- Track New Product Card -->
+    <div class="card rounded-2xl p-6 mb-6">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i>
+        <h2 class="text-base font-semibold text-white">Track a New Product</h2>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 mb-3">
+        <input id="trackUrl" type="url" placeholder="Paste any Amazon, eBay, or e-commerce product URL..." class="input-field flex-1 px-4 py-2.5 rounded-xl text-sm" />
+        <input id="targetPrice" type="number" placeholder="Target price ($)" class="input-field w-full sm:w-40 px-4 py-2.5 rounded-xl text-sm" />
+        <select id="notifChannel" class="input-field w-full sm:w-36 px-4 py-2.5 rounded-xl text-sm">
+          <option value="EMAIL">📧 Email</option>
+          <option value="DISCORD">💬 Discord</option>
+          <option value="WEBHOOK">🔗 Webhook</option>
+        </select>
+        <button onclick="trackItem()" id="trackBtn" class="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          <span>Track Now</span>
+        </button>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <span class="text-xs text-slate-500">Quick samples:</span>
+        <button class="sample-chip" onclick="fillSample('https://www.amazon.com/dp/B09X7MPX8L', 180)">🎧 Sony XM5 Headphones</button>
+        <button class="sample-chip" onclick="fillSample('https://www.amazon.com/dp/B0CM5JV268', 950)">💻 MacBook Air M3</button>
+        <button class="sample-chip" onclick="fillSample('https://www.amazon.com/dp/B07FQ4DJ7L', 80)">📖 Kindle Paperwhite</button>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6" id="statsRow"></div>
+
+    <!-- Watchlist Header -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="eye" class="w-5 h-5 text-slate-400"></i>
+        <h2 class="text-base font-semibold text-white">Your Watchlist</h2>
+        <span id="itemCountBadge" class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">0 items</span>
+      </div>
+      <button onclick="triggerPoll()" id="pollBtn" class="text-xs flex items-center gap-1.5 text-slate-400 hover:text-blue-400 border border-slate-700 hover:border-blue-500/40 px-3 py-1.5 rounded-lg transition-all">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+        Trigger Background Poll
+      </button>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden card rounded-2xl p-16 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="package-search" class="w-7 h-7 text-blue-400"></i>
+      </div>
+      <h3 class="text-white font-semibold mb-2">Your watchlist is empty</h3>
+      <p class="text-slate-500 text-sm mb-5">Paste a product URL above and set your target price to start tracking!</p>
+      <button onclick="fillSample('https://www.amazon.com/dp/B09X7MPX8L', 180)" class="btn-primary text-white text-sm px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2 mx-auto">
+        <i data-lucide="plus" class="w-4 h-4"></i> Add Your First Product
+      </button>
+    </div>
+
+    <!-- Watchlist Grid -->
+    <div id="watchlist" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+  </div>
+
+  <!-- ============ MODALS ============ -->
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onclick="closeModalOnBg(event, 'loginModal')">
+    <div class="modal-content rounded-2xl p-8 w-full max-w-sm mx-4 fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-white">Welcome back</h2>
+        <button onclick="hideModal('loginModal')" class="text-slate-500 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Email</label>
+          <input id="loginEmail" type="email" placeholder="you@example.com" class="input-field w-full px-4 py-2.5 rounded-xl text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Password</label>
+          <input id="loginPassword" type="password" placeholder="••••••••" class="input-field w-full px-4 py-2.5 rounded-xl text-sm" onkeydown="if(event.key==='Enter') login()" />
+        </div>
+        <button onclick="login()" class="btn-primary w-full text-white py-2.5 rounded-xl font-semibold text-sm">Sign In</button>
+        <p class="text-center text-xs text-slate-500">Don't have an account? <button onclick="hideModal('loginModal');showModal('registerModal')" class="text-blue-400 hover:underline">Register free</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div id="registerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onclick="closeModalOnBg(event, 'registerModal')">
+    <div class="modal-content rounded-2xl p-8 w-full max-w-sm mx-4 fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-white">Create Account</h2>
+        <button onclick="hideModal('registerModal')" class="text-slate-500 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Email</label>
+          <input id="regEmail" type="email" placeholder="you@example.com" class="input-field w-full px-4 py-2.5 rounded-xl text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Password</label>
+          <input id="regPassword" type="password" placeholder="Min. 8 characters" class="input-field w-full px-4 py-2.5 rounded-xl text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-1 block">Account Tier</label>
+          <select id="regTier" class="input-field w-full px-4 py-2.5 rounded-xl text-sm">
+            <option value="FREE">🆓 Free (5 items)</option>
+            <option value="PREMIUM">⭐ Premium (50 items)</option>
+          </select>
+        </div>
+        <button onclick="register()" class="btn-primary w-full text-white py-2.5 rounded-xl font-semibold text-sm">Create Account</button>
+        <p class="text-center text-xs text-slate-500">Already have an account? <button onclick="hideModal('registerModal');showModal('loginModal')" class="text-blue-400 hover:underline">Sign in</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Modal -->
+  <div id="chartModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onclick="closeModalOnBg(event, 'chartModal')">
+    <div class="modal-content rounded-2xl p-6 w-full max-w-2xl mx-4 fade-in">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-base font-bold text-white" id="chartTitle">Price History</h2>
+          <p class="text-xs text-slate-500 mt-0.5" id="chartSubtitle"></p>
+        </div>
+        <button onclick="hideModal('chartModal')" class="text-slate-500 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <!-- Chart Stats -->
+      <div class="grid grid-cols-4 gap-3 mb-5" id="chartStats"></div>
+      <!-- Chart Canvas -->
+      <div class="bg-slate-900/60 rounded-xl p-4 h-56">
+        <canvas id="priceChart"></canvas>
+      </div>
+      <div id="noHistoryMsg" class="hidden text-center text-slate-500 text-sm py-10">
+        No price history yet. Trigger a background poll to fetch prices.
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
+    <div class="modal-content rounded-2xl p-6 w-full max-w-sm mx-4 fade-in text-center">
+      <div class="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
+      </div>
+      <h3 class="text-white font-semibold mb-2">Stop Tracking?</h3>
+      <p class="text-slate-400 text-sm mb-6">This will remove the product from your watchlist. You can re-add it anytime.</p>
+      <div class="flex gap-3">
+        <button onclick="hideModal('deleteModal')" class="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-sm hover:border-slate-500 transition-colors">Cancel</button>
+        <button id="confirmDeleteBtn" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    // Initialize Lucide icons after DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      App.init();
+    });
+  </script>
+</body>
+</html>
