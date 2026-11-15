@@ -272,17 +272,17 @@ async function openChart(item) {
         datasets: [{
           label: 'Price',
           data: data.prices,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.07)',
           borderWidth: 2,
-          pointBackgroundColor: data.prices.map(p => p === data.min_price ? '#22c55e' : '#3b82f6'),
-          pointRadius: data.prices.map(p => p === data.min_price ? 5 : 3),
+          pointBackgroundColor: data.prices.map(p => p === data.min_price ? '#4ade80' : '#f97316'),
+          pointRadius: data.prices.map(p => p === data.min_price ? 6 : 3),
           tension: 0.4,
           fill: true,
         }, {
-          label: 'Target',
+          label: 'Your Target',
           data: data.prices.map(() => item.target_price),
-          borderColor: 'rgba(234, 179, 8, 0.6)',
+          borderColor: 'rgba(74, 222, 128, 0.5)',
           borderDash: [6, 3],
           borderWidth: 1.5,
           pointRadius: 0,
@@ -293,14 +293,21 @@ async function openChart(item) {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } },
-          tooltip: { backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: 'rgba(148,163,184,0.1)', borderWidth: 1 }
+          legend: { labels: { color: '#a08060', boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            backgroundColor: '#1c140c',
+            titleColor: '#f8eedf',
+            bodyColor: '#a08060',
+            borderColor: 'rgba(245,158,11,0.2)',
+            borderWidth: 1,
+            callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)}` }
+          }
         },
         scales: {
-          x: { ticks: { color: '#475569', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.06)' } },
+          x: { ticks: { color: '#5c4a30', font: { size: 10 } }, grid: { color: 'rgba(245,158,11,0.04)' } },
           y: {
-            ticks: { color: '#475569', font: { size: 10 }, callback: v => `$${v}` },
-            grid: { color: 'rgba(148,163,184,0.06)' }
+            ticks: { color: '#5c4a30', font: { size: 10 }, callback: v => `$${v}` },
+            grid: { color: 'rgba(245,158,11,0.04)' }
           }
         }
       }
